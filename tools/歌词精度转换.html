@@ -1,0 +1,472 @@
+<html lang="zh-CN"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LRC歌词格式转换器</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- 统一的 Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#6366f1',
+                        secondary: '#8b5cf6',
+                        dark: '#1e1b4b',
+                        light: '#e0e7ff',
+                        accent: '#f472b6'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .glass {
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            .transition-height {
+                transition: height 0.3s ease;
+            }
+        }
+        
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(30, 27, 75, 0.3);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.6);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(99, 102, 241, 0.8);
+        }
+        
+        /* 动画效果 */
+        .format-highlight {
+            position: relative;
+        }
+        
+        .format-highlight::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, #6366f1, #f472b6);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s ease;
+        }
+        
+        .format-highlight:hover::after {
+            transform: scaleX(1);
+        }
+        
+        /* 复制按钮动画 */
+        .copy-btn {
+            transition: all 0.3s ease;
+        }
+        
+        .copy-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .copy-btn.copied {
+            background-color: #10b981;
+            transform: scale(0.95);
+        }
+        
+        /* 文本区域焦点效果 */
+        textarea:focus {
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-dark to-gray-900 min-h-screen text-light">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- 标题区域 -->
+        <header class="text-center mb-10">
+            <h1 class="text-4xl md:text-5xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent text-shadow">
+                LRC歌词精度转换
+            </h1>
+            <p class="text-lg text-gray-300 max-w-2xl mx-auto">
+                轻松在 <span class="format-highlight">[mm:ss.xx]</span> 和 <span class="format-highlight">[mm:ss.xxx]</span> 格式之间转换，支持实时转换和一键复制
+            </p>
+        </header>
+        
+        <!-- 主要内容区域 -->
+        <main class="glass rounded-xl p-6 shadow-xl">
+            <!-- 输入区域 -->
+            <div class="mb-6">
+                <div class="flex justify-between items-center mb-2">
+                    <label for="input-text" class="text-lg font-medium text-light">输入歌词</label>
+                    <div class="flex items-center gap-2">
+                        <div id="format-indicator" class="text-sm px-3 py-1 rounded-full bg-primary/30 text-light hidden">
+                            检测到 <span id="detected-format">mm:ss.xx</span> 格式
+                        </div>
+                        <button id="clear-btn" class="px-3 py-1 rounded-full bg-gray-700/70 text-light text-sm flex items-center gap-1 hover:bg-gray-600/70 transition-colors">
+                            <i class="fa fa-trash"></i>
+                            <span>清除</span>
+                        </button>
+                    </div>
+                </div>
+                <textarea id="input-text" class="w-full h-48 p-4 rounded-lg bg-dark/50 border border-primary/30 text-light focus:outline-none transition-all" placeholder="在此粘贴或输入LRC格式歌词，支持 [mm:ss.xx] 或 [mm:ss.xxx] 格式..."></textarea>
+            </div>
+            
+            <!-- 转换按钮（可选，主要依靠实时转换） -->
+            <div class="flex justify-center mb-6">
+                <button id="convert-btn" class="px-6 py-2 bg-gradient-to-r from-primary to-secondary rounded-full font-medium hover:opacity-90 transition-opacity flex items-center gap-2">
+                    <i class="fa fa-exchange"></i>
+                    <span>转换格式</span>
+                </button>
+            </div>
+            
+            <!-- 输出区域 -->
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <label for="output-text" class="text-lg font-medium text-light">转换结果</label>
+                    <div class="flex items-center gap-2">
+                        <button id="copy-btn" class="copy-btn px-3 py-1 rounded-full bg-primary/70 text-light text-sm flex items-center gap-1">
+                            <i class="fa fa-copy"></i>
+                            <span>复制</span>
+                        </button>
+                        <button id="remove-timestamps-btn" class="px-3 py-1 rounded-full bg-gray-700/70 text-light text-sm flex items-center gap-1 hover:bg-gray-600/70 transition-colors">
+                            <i class="fa fa-clock-o"></i>
+                            <span>清除时间戳</span>
+                        </button>
+                        <button id="export-btn" class="px-3 py-1 rounded-full bg-secondary/70 text-light text-sm flex items-center gap-1 hover:bg-secondary/90 transition-colors">
+                            <i class="fa fa-download"></i>
+                            <span>导出</span>
+                        </button>
+                    </div>
+                </div>
+                <textarea id="output-text" class="w-full h-48 p-4 rounded-lg bg-dark/50 border border-secondary/30 text-light focus:outline-none transition-all" placeholder="转换后的歌词将显示在这里..." readonly=""></textarea>
+            </div>
+        </main>
+        
+        <!-- 说明区域 -->
+        <section class="mt-10 glass rounded-xl p-6 shadow-xl">
+            <h2 class="text-2xl font-bold mb-4 text-light">转换规则说明</h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-dark/30 p-4 rounded-lg">
+                    <h3 class="text-xl font-semibold mb-2 text-primary">3位 → 2位 [mm:ss.xxx] → [mm:ss.xx]</h3>
+                    <p class="text-gray-300">第三位小数将进行四舍五入处理</p>
+                    <div class="mt-3 text-sm bg-dark/50 p-2 rounded">
+                        <p class="mb-1"><span class="text-accent">[01:23.456]</span> → <span class="text-green-400">[01:23.46]</span></p>
+                        <p><span class="text-accent">[02:34.543]</span> → <span class="text-green-400">[02:34.54]</span></p>
+                    </div>
+                </div>
+                <div class="bg-dark/30 p-4 rounded-lg">
+                    <h3 class="text-xl font-semibold mb-2 text-secondary">2位 → 3位 [mm:ss.xx] → [mm:ss.xxx]</h3>
+                    <p class="text-gray-300">在末尾补充一个0</p>
+                    <div class="mt-3 text-sm bg-dark/50 p-2 rounded">
+                        <p class="mb-1"><span class="text-accent">[01:23.45]</span> → <span class="text-green-400">[01:23.450]</span></p>
+                        <p><span class="text-accent">[02:34.56]</span> → <span class="text-green-400">[02:34.560]</span></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 页脚 -->
+        <footer class="mt-10 text-center text-gray-400 text-sm">
+            <p>© 2025 LRC歌词格式转换器 | 专为音乐爱好者设计</p>
+        </footer>
+    </div>
+
+    <script>
+        // 获取DOM元素
+        const inputText = document.getElementById('input-text');
+        const outputText = document.getElementById('output-text');
+        const convertBtn = document.getElementById('convert-btn');
+        const copyBtn = document.getElementById('copy-btn');
+        const formatIndicator = document.getElementById('format-indicator');
+        const detectedFormat = document.getElementById('detected-format');
+        
+        // 正则表达式用于匹配LRC时间格式
+        const regex2Digits = /\[(\d{2}):(\d{2})\.(\d{2})\]/g; // [mm:ss.xx]
+        const regex3Digits = /\[(\d{2}):(\d{2})\.(\d{3})\]/g; // [mm:ss.xxx]
+        
+        // 检测输入文本的格式
+        function detectFormat(text) {
+            const has2Digits = regex2Digits.test(text);
+            const has3Digits = regex3Digits.test(text);
+            
+            // 重置正则表达式的lastIndex
+            regex2Digits.lastIndex = 0;
+            regex3Digits.lastIndex = 0;
+            
+            if (has3Digits && !has2Digits) {
+                return '3digits';
+            } else if (has2Digits && !has3Digits) {
+                return '2digits';
+            } else if (has2Digits && has3Digits) {
+                return 'mixed';
+            } else {
+                return 'none';
+            }
+        }
+        
+        // 转换函数：3位小数转2位小数（四舍五入）
+        function convert3to2(text) {
+            return text.replace(regex3Digits, (match, minutes, seconds, milliseconds) => {
+                // 将毫秒部分四舍五入到2位小数
+                const roundedMs = Math.round(parseInt(milliseconds) / 10);
+                const formattedMs = roundedMs.toString().padStart(2, '0');
+                return `[${minutes}:${seconds}.${formattedMs}]`;
+            });
+        }
+        
+        // 转换函数：2位小数转3位小数（末尾补0）
+        function convert2to3(text) {
+            return text.replace(regex2Digits, (match, minutes, seconds, milliseconds) => {
+                // 在毫秒部分末尾添加一个0
+                return `[${minutes}:${seconds}.${milliseconds}0]`;
+            });
+        }
+        
+        // 执行转换
+        function performConversion() {
+            const text = inputText.value;
+            if (!text.trim()) {
+                outputText.value = '';
+                formatIndicator.classList.add('hidden');
+                return;
+            }
+            
+            const format = detectFormat(text);
+            
+            if (format === '3digits') {
+                outputText.value = convert3to2(text);
+                detectedFormat.textContent = 'mm:ss.xxx';
+                formatIndicator.classList.remove('hidden');
+                formatIndicator.classList.remove('bg-secondary/30');
+                formatIndicator.classList.add('bg-primary/30');
+            } else if (format === '2digits') {
+                outputText.value = convert2to3(text);
+                detectedFormat.textContent = 'mm:ss.xx';
+                formatIndicator.classList.remove('hidden');
+                formatIndicator.classList.remove('bg-primary/30');
+                formatIndicator.classList.add('bg-secondary/30');
+            } else if (format === 'mixed') {
+                // 如果混合格式，先统一转为3位，再根据用户选择转换
+                let tempText = text.replace(regex2Digits, (match, minutes, seconds, milliseconds) => {
+                    return `[${minutes}:${seconds}.${milliseconds}0]`;
+                });
+                outputText.value = convert3to2(tempText);
+                detectedFormat.textContent = '混合格式';
+                formatIndicator.classList.remove('hidden');
+                formatIndicator.classList.remove('bg-primary/30', 'bg-secondary/30');
+                formatIndicator.classList.add('bg-yellow-500/30');
+            } else {
+                outputText.value = '未检测到LRC时间格式，请检查输入内容';
+                formatIndicator.classList.add('hidden');
+            }
+        }
+        
+        // 复制结果到剪贴板
+        function copyToClipboard() {
+            if (!outputText.value.trim()) return;
+            
+            outputText.select();
+            document.execCommand('copy');
+            
+            // 视觉反馈
+            copyBtn.classList.add('copied');
+            copyBtn.innerHTML = '<i class="fa fa-check"></i><span>已复制</span>';
+            
+            setTimeout(() => {
+                copyBtn.classList.remove('copied');
+                copyBtn.innerHTML = '<i class="fa fa-copy"></i><span>复制</span>';
+            }, 1500);
+        }
+        
+        // 清除输入文本
+        function clearInput() {
+            inputText.value = '';
+            outputText.value = '';
+            formatIndicator.classList.add('hidden');
+        }
+        
+        // 导出转换结果
+        function exportResult() {
+            if (!outputText.value.trim()) return;
+            
+            // 创建格式选择对话框
+            const formatDialog = document.createElement('div');
+            formatDialog.className = 'fixed inset-0 flex items-center justify-center bg-black/50 z-50';
+            formatDialog.innerHTML = `
+                <div class="bg-dark p-6 rounded-xl shadow-xl max-w-sm w-full">
+                    <h3 class="text-xl font-bold mb-4 text-light">选择导出格式</h3>
+                    <div class="flex gap-4 mb-6">
+                        <button class="flex-1 py-2 px-4 bg-primary/70 text-light rounded-lg hover:bg-primary/90 transition-colors format-option" data-format="lrc">
+                            <i class="fa fa-music mr-2"></i>.lrc
+                        </button>
+                        <button class="flex-1 py-2 px-4 bg-gray-700/70 text-light rounded-lg hover:bg-gray-600/70 transition-colors format-option" data-format="txt">
+                            <i class="fa fa-file-text-o mr-2"></i>.txt
+                        </button>
+                    </div>
+                    <div class="flex justify-end">
+                        <button id="cancel-export" class="px-4 py-2 text-light hover:text-gray-300 transition-colors">
+                            取消
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // 添加到页面
+            document.body.appendChild(formatDialog);
+            
+            // 格式选择事件
+            const formatOptions = formatDialog.querySelectorAll('.format-option');
+            formatOptions.forEach(option => {
+                option.addEventListener('click', () => {
+                    const format = option.getAttribute('data-format');
+                    performExport(format);
+                    document.body.removeChild(formatDialog);
+                });
+            });
+            
+            // 取消按钮事件
+            document.getElementById('cancel-export').addEventListener('click', () => {
+                document.body.removeChild(formatDialog);
+            });
+            
+            // 点击对话框外部关闭
+            formatDialog.addEventListener('click', (e) => {
+                if (e.target === formatDialog) {
+                    document.body.removeChild(formatDialog);
+                }
+            });
+        }
+        
+        // 执行导出
+        function performExport(format) {
+            // 创建下载链接
+            const blob = new Blob([outputText.value], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            
+            // 设置下载属性
+            a.href = url;
+            a.download = `converted-lyrics.${format}`;
+            
+            // 触发下载
+            document.body.appendChild(a);
+            a.click();
+            
+            // 清理
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            // 视觉反馈
+            const exportBtn = document.getElementById('export-btn');
+            exportBtn.innerHTML = '<i class="fa fa-check"></i><span>已导出</span>';
+            
+            setTimeout(() => {
+                exportBtn.innerHTML = '<i class="fa fa-download"></i><span>导出</span>';
+            }, 1500);
+        }
+        
+        // 清除时间戳
+        function removeTimestamps() {
+            if (!outputText.value.trim()) return;
+            
+            // 清除所有时间戳
+            const textWithoutTimestamps = outputText.value.replace(/\[\d{2}:\d{2}\.\d{2,3}\]/g, '').trim();
+            
+            // 更新输出区域
+            outputText.value = textWithoutTimestamps;
+            
+            // 视觉反馈
+            const removeBtn = document.getElementById('remove-timestamps-btn');
+            removeBtn.innerHTML = '<i class="fa fa-check"></i><span>已清除</span>';
+            
+            // 重置按钮文本
+            setTimeout(() => {
+                removeBtn.innerHTML = '<i class="fa fa-clock-o"></i><span>清除时间戳</span>';
+            }, 1500);
+        }
+        
+
+        
+        // 事件监听器
+        inputText.addEventListener('input', performConversion);
+        convertBtn.addEventListener('click', performConversion);
+        copyBtn.addEventListener('click', copyToClipboard);
+        document.getElementById('clear-btn').addEventListener('click', clearInput);
+        document.getElementById('export-btn').addEventListener('click', exportResult);
+        document.getElementById('remove-timestamps-btn').addEventListener('click', removeTimestamps);
+        
+
+        
+        // 添加键盘快捷键
+        document.addEventListener('keydown', (e) => {
+            // Ctrl/Cmd + Enter 执行转换
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                performConversion();
+            }
+            
+            // Ctrl/Cmd + C 复制结果（当输出区域有内容时）
+            if ((e.ctrlKey || e.metaKey) && e.key === 'c' && outputText.value.trim() && document.activeElement !== inputText) {
+                e.preventDefault();
+                copyToClipboard();
+            }
+        });
+        
+        // 添加一些示例文本的按钮（可选功能）
+        const exampleBtn = document.createElement('button');
+        exampleBtn.className = 'mt-4 px-4 py-2 bg-dark/50 border border-primary/30 rounded-lg text-light text-sm hover:bg-primary/20 transition-colors';
+        exampleBtn.textContent = '加载示例文本';
+        exampleBtn.addEventListener('click', () => {
+            inputText.value = `[00:01.23]这是一个 [mm:ss.xx] 格式的示例
+[00:03.45]用于测试转换功能
+[00:05.67]支持多行歌词
+[00:07.89]请查看转换结果`;
+            performConversion();
+        });
+        
+        // 将示例按钮添加到输入区域下方
+        const inputContainer = inputText.parentElement;
+        inputContainer.appendChild(exampleBtn);
+        
+        // 添加另一个示例按钮，用于3位小数格式
+        const exampleBtn2 = document.createElement('button');
+        exampleBtn2.className = 'mt-2 px-4 py-2 bg-dark/50 border border-secondary/30 rounded-lg text-light text-sm hover:bg-secondary/20 transition-colors ml-2';
+        exampleBtn2.textContent = '加载3位小数示例';
+        exampleBtn2.addEventListener('click', () => {
+            inputText.value = `[00:01.234]这是一个 [mm:ss.xxx] 格式的示例
+[00:03.456]用于测试转换功能
+[00:05.678]支持多行歌词
+[00:07.890]请查看转换结果`;
+            performConversion();
+        });
+        
+        inputContainer.appendChild(exampleBtn2);
+    </script>
+
+</body></html>
