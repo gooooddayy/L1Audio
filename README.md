@@ -20,7 +20,6 @@ LRC 歌词时间戳在 2 位与 3 位毫秒精度间互转，支持实时转换�
 **图片编辑**
 AI 抠图 · AI 移除去水印 · 改尺寸 · 旋转 · 镜像 · 裁剪 · 马赛克 · 文字 · 格式转换
 
-<img width="1920" height="934" alt="image" src="https://github.com/user-attachments/assets/dcaa75a4-a9c3-41b5-8b7a-4ac04198e008" /><br>
 
 ## 怎么用
 
