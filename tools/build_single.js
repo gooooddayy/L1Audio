@@ -12,6 +12,8 @@
  *
  * 注意:
  *   - 四个源页面通过 iframe srcdoc 隔离运行，互相不干扰
+ *   - 「图片编辑」不参与内嵌（带 200MB 级 AI 模型），由 template 里 iframe src 指向
+ *     同目录的 L1-Photo-Editor/index.html，分发时必须整个目录一起给
  *   - 改完源页面后重新构建，再提交 index.html
  */
 const fs = require('fs');
@@ -43,6 +45,12 @@ function main() {
 
   const dest = path.join(ROOT, 'index.html');
   fs.writeFileSync(dest, out);
+
+  // 图片编辑是外挂目录，缺了它构建产物照样能出来，但该功能会失效
+  const peHome = path.join(ROOT, 'L1-Photo-Editor', 'index.html');
+  if (!fs.existsSync(peHome)) {
+    console.warn('警告: 缺少 L1-Photo-Editor/index.html —— 构建产物里「图片编辑」会不可用');
+  }
 
   const hash = crypto.createHash('sha256').update(out).digest('hex').substring(0, 16);
   console.log('构建完成 ->', dest);
