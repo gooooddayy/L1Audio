@@ -1,7 +1,7 @@
 # L1Audio
 
 一站式本地音频处理工具箱 — 分析、增强、歌词转换、音频编辑、图片编辑，全部本地运行，无需联网<br>
-【WorkBuddy】index.zip https://workbuddy.link/p/2dfsuX7AsjTBRRKgnARhkx?ext2=copy_link
+【WorkBuddy旧版】index.zip https://workbuddy.link/p/2dfsuX7AsjTBRRKgnARhkx?ext2=copy_link
 
 ## 五个工具
 
